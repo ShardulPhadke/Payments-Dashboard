@@ -23,8 +23,5 @@
     "**/*spec.ts"
   ],
   "references": [
-    {
-      "path": "../libs/shared-types"
-    }
   ]
 }
