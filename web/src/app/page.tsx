@@ -1,4 +1,4 @@
-import { Payment } from '@payment/shared-types';
+import { Payment, PaymentMethod, PaymentStatus } from '@payment/shared-types';
 
 
 export default function Index() {
@@ -11,10 +11,10 @@ export default function Index() {
     _id: '1',
     tenantId: 'tenant_1',
     amount: 100,
-    method: 'card',
-    status: 'success',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    method: PaymentMethod.CREDIT_CARD,
+    status: PaymentStatus.SUCCESS,
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
   console.log(testPayment);
   return (
