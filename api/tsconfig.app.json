@@ -1,0 +1,30 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "target": "es2021",
+    "sourceMap": true,
+    "declaration": false,
+    "removeComments": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test",
+    "**/*spec.ts"
+  ],
+  "references": [
+    {
+      "path": "../libs/shared-types"
+    }
+  ]
+}

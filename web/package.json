@@ -1,0 +1,49 @@
+{
+  "name": "@payment-analytics/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "nx": {
+    "targets": {
+      "dev": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "next dev",
+          "cwd": "web"
+        }
+      },
+      "build": {
+        "executor": "nx:run-commands",
+        "outputs": ["{projectRoot}/.next"],
+        "options": {
+          "command": "next build",
+          "cwd": "web"
+        }
+      },
+      "serve": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "next dev",
+          "cwd": "web"
+        }
+      },
+      "start": {
+        "executor": "nx:run-commands",
+        "dependsOn": ["build"],
+        "options": {
+          "command": "next start",
+          "cwd": "web"
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "next": "~15.2.4",
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  }
+}
