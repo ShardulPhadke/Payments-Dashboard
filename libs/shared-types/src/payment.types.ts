@@ -81,3 +81,8 @@ export enum TrendPeriod {
   WEEK = 'week',
   MONTH = 'month',
 }
+
+export interface StatusCountResult {
+  _id: string;
+  count: number;
+}
