@@ -1,23 +1,8 @@
 import { Controller, Get, Query, BadRequestException } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { PaymentMetrics, TrendData } from '@payment/shared-types';
-
-/**
- * Query DTO for metrics endpoint
- */
-class GetMetricsQueryDto {
-    tenantId!: string;
-    startDate?: string;
-    endDate?: string;
-}
-
-/**
- * Query DTO for trends endpoint
- */
-class GetTrendsQueryDto {
-    tenantId!: string;
-    period!: 'day' | 'week' | 'month'; // period for aggregation
-}
+import { GetTrendsDto } from './dto/get-trends.dto';
+import { GetMetricsDto } from './dto/get-metrics.dto';
 
 /**
  * Analytics Controller
@@ -25,7 +10,7 @@ class GetTrendsQueryDto {
  * REST endpoints for payment analytics.
  * All endpoints require tenantId for multi-tenant isolation.
  */
-@Controller('analytics')
+@Controller('api/analytics')
 export class AnalyticsController {
     constructor(private readonly analyticsService: AnalyticsService) { }
 
@@ -57,7 +42,7 @@ export class AnalyticsController {
      * }
      */
     @Get('metrics')
-    async getMetrics(@Query() query: GetMetricsQueryDto): Promise<PaymentMetrics> {
+    async getMetrics(@Query() query: GetMetricsDto): Promise<PaymentMetrics> {
         const { tenantId, startDate, endDate } = query;
 
         // Validate tenantId
@@ -121,7 +106,7 @@ export class AnalyticsController {
      * ]
      */
     @Get('trends')
-    async getTrends(@Query() query: GetTrendsQueryDto): Promise<TrendData[]> {
+    async getTrends(@Query() query: GetTrendsDto): Promise<TrendData[]> {
         const { tenantId, period } = query;
 
         if (!tenantId) {

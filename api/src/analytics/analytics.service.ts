@@ -245,6 +245,24 @@ export class AnalyticsService {
     }
 
     /**
+     * 
+     * @param year current year
+     * @param week 
+     * @returns first day of the week
+     */
+    private getISOWeekStart(year: number, week: number): Date {
+        const jan4 = new Date(Date.UTC(year, 0, 4));
+        const dayOfWeek = jan4.getUTCDay(); // 0=Sun, 1=Mon, ...
+        const diffToMonday = ((dayOfWeek + 6) % 7); // days to go back to Monday
+        const week1Monday = new Date(Date.UTC(year, 0, 4 - diffToMonday));
+        return new Date(Date.UTC(
+            week1Monday.getUTCFullYear(),
+            week1Monday.getUTCMonth(),
+            week1Monday.getUTCDate() + (week - 1) * 7
+        ));
+    }
+
+    /**
      * Calculate payment trends for a tenant over a specified period.
      * 
      * Uses MongoDB aggregation pipeline to compute trends:
@@ -289,8 +307,8 @@ export class AnalyticsService {
                 break;
             case 'week':
                 groupId = {
-                    year: { $year: '$createdAt' },
-                    week: { $week: '$createdAt' },
+                    year: { $isoWeekYear: '$createdAt' },
+                    week: { $isoWeek: '$createdAt' },
                 };
                 break;
             case 'month':
@@ -328,8 +346,7 @@ export class AnalyticsService {
                     date = new Date(Date.UTC(id.year, id.month - 1, id.day));
                     break;
                 case 'week':
-                    // First day of year + (week - 1) * 7 days
-                    date = new Date(Date.UTC(id.year, 0, 1 + (id.week - 1) * 7));
+                    date = this.getISOWeekStart(id.year, id.week);
                     break;
                 case 'month':
                     date = new Date(Date.UTC(id.year, id.month - 1, 1));

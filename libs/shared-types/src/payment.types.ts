@@ -27,8 +27,8 @@ export interface Payment {
   amount: number;
   method: PaymentMethod;
   status: PaymentStatus;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 /**
@@ -45,6 +45,15 @@ export type PaymentEventType =
 export interface PaymentEvent {
   type: PaymentEventType;
   payment: Payment;
+  timestamp: Date;
+}
+
+/**
+ * WebSocket connection status event
+ */
+export interface ConnectionStatusEvent {
+  status: 'connected' | 'disconnected' | 'error';
+  message?: string;
   timestamp: Date;
 }
 

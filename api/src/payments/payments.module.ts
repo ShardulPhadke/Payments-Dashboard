@@ -10,8 +10,11 @@ import { PaymentsService } from './payments.service';
  * - Payment schema and model registration
  * - PaymentsService for business logic
  * 
- * Exports PaymentsService so other modules can use it
- * (e.g., AnalyticsModule, WebSocketModule, seed scripts)
+ * Exports PaymentsService so other modules can use it:
+ * - AnalyticsModule (for metrics calculation)
+ * - WebSocketModule (implicit via events)
+ * - SimulatorModule (for generating test payments)
+ * - Seed scripts
  */
 @Module({
   imports: [
@@ -22,4 +25,4 @@ import { PaymentsService } from './payments.service';
   providers: [PaymentsService],
   exports: [PaymentsService],
 })
-export class PaymentsModule {}
+export class PaymentsModule { }
