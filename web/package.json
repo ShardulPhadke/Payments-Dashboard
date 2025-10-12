@@ -18,7 +18,9 @@
       },
       "build": {
         "executor": "nx:run-commands",
-        "outputs": ["{projectRoot}/.next"],
+        "outputs": [
+          "{projectRoot}/.next"
+        ],
         "options": {
           "command": "next build",
           "cwd": "web"
@@ -33,7 +35,9 @@
       },
       "start": {
         "executor": "nx:run-commands",
-        "dependsOn": ["build"],
+        "dependsOn": [
+          "build"
+        ],
         "options": {
           "command": "next start",
           "cwd": "web"
@@ -42,6 +46,9 @@
     }
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^7.3.4",
     "next": "~15.2.4",
     "react": "19.0.0",
     "react-dom": "19.0.0"

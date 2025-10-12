@@ -1,8 +1,20 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import type { PaymentEvent, ConnectionStatusEvent } from '@payment/shared-types'
+import type { Payment } from '@payment/shared-types'
+
+export type PaymentEventForStore = {
+    type: string
+    payment: Payment
+    timestamp: string // ISO string
+}
+
+interface ConnectionStatusEvent {
+    status: 'connected' | 'disconnected' | 'error'
+    message?: string
+    timestamp: string // ISO string
+}
 
 interface PaymentsWsState {
-    events: PaymentEvent[]
+    events: PaymentEventForStore[]
     connection: ConnectionStatusEvent | null
 }
 
@@ -15,8 +27,8 @@ export const paymentsWsSlice = createSlice({
     name: 'paymentsWs',
     initialState,
     reducers: {
-        addPaymentEvent: (state, action: PayloadAction<PaymentEvent>) => {
-            state.events.unshift(action.payload) // newest first
+        addPaymentEvent: (state, action: PayloadAction<PaymentEventForStore>) => {
+            state.events.unshift(action.payload)
         },
         setConnectionStatus: (state, action: PayloadAction<ConnectionStatusEvent>) => {
             state.connection = action.payload
