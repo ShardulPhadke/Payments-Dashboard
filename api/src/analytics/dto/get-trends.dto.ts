@@ -1,10 +1,6 @@
-import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsEnum } from 'class-validator';
 
 export class GetTrendsDto {
-    @IsNotEmpty()
-    @IsString()
-    tenantId!: string;
-
     @IsEnum(['day', 'week', 'month'])
     period!: 'day' | 'week' | 'month';
 }

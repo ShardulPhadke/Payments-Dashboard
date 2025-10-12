@@ -1,16 +1,21 @@
-import { Controller, Get, Query, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { PaymentMetrics, TrendData } from '@payment/shared-types';
 import { GetTrendsDto } from './dto/get-trends.dto';
 import { GetMetricsDto } from './dto/get-metrics.dto';
+import { TenantGuard } from '../common/guards/tenant.guard';
+import { TenantId } from '../common/decorators/tenant-id.decorator';
 
 /**
  * Analytics Controller
  * 
  * REST endpoints for payment analytics.
- * All endpoints require tenantId for multi-tenant isolation.
+ * All endpoints require X-Tenant-Id header for multi-tenant isolation.
+ * 
+ * @UseGuards(TenantGuard) - Validates X-Tenant-Id header on all routes
  */
 @Controller('api/analytics')
+@UseGuards(TenantGuard)  // Apply guard to all routes in this controller
 export class AnalyticsController {
     constructor(private readonly analyticsService: AnalyticsService) { }
 
@@ -19,14 +24,19 @@ export class AnalyticsController {
      * 
      * Returns comprehensive payment metrics for a tenant.
      * 
-     * Query Parameters:
-     * - tenantId (required): Tenant identifier
-     * - startDate (optional): Start date for filtering (ISO 8601)
-     * - endDate (optional): End date for filtering (ISO 8601)
+     * Headers (required):
+     * - X-Tenant-Id: Tenant identifier
+     * 
+     * Query Parameters (optional):
+     * - startDate: Start date for filtering (ISO 8601)
+     * - endDate: End date for filtering (ISO 8601)
      * 
      * Example:
-     * GET /api/analytics/metrics?tenantId=tenant-alpha
-     * GET /api/analytics/metrics?tenantId=tenant-alpha&startDate=2024-10-01&endDate=2024-10-10
+     * curl -H "X-Tenant-Id: tenant-alpha" \
+     *   "http://localhost:3333/api/analytics/metrics"
+     * 
+     * curl -H "X-Tenant-Id: tenant-alpha" \
+     *   "http://localhost:3333/api/analytics/metrics?startDate=2024-10-01&endDate=2024-10-10"
      * 
      * Response:
      * {
@@ -42,18 +52,16 @@ export class AnalyticsController {
      * }
      */
     @Get('metrics')
-    async getMetrics(@Query() query: GetMetricsDto): Promise<PaymentMetrics> {
-        const { tenantId, startDate, endDate } = query;
-
-        // Validate tenantId
-        if (!tenantId) {
-            throw new BadRequestException('tenantId is required');
-        }
+    async getMetrics(
+        @TenantId() tenantId: string,  // Extracted by TenantGuard
+        @Query() query: GetMetricsDto
+    ): Promise<PaymentMetrics> {
+        const { startDate, endDate } = query;
 
         // If date range is provided, validate and use it
         if (startDate || endDate) {
             if (!startDate || !endDate) {
-                throw new BadRequestException('Both startDate and endDate are required when filtering by date');
+                throw new Error('Both startDate and endDate are required when filtering by date');
             }
 
             const start = new Date(startDate);
@@ -61,11 +69,11 @@ export class AnalyticsController {
 
             // Validate dates
             if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-                throw new BadRequestException('Invalid date format. Use ISO 8601 format (YYYY-MM-DD)');
+                throw new Error('Invalid date format. Use ISO 8601 format (YYYY-MM-DD)');
             }
 
             if (start > end) {
-                throw new BadRequestException('startDate must be before endDate');
+                throw new Error('startDate must be before endDate');
             }
 
             return this.analyticsService.getMetricsForDateRange(tenantId, start, end);
@@ -80,41 +88,38 @@ export class AnalyticsController {
      * 
      * Returns payment trends for a tenant aggregated by the requested period.
      * 
-     * Query Parameters:
-     * - tenantId (required): Tenant identifier
-     * - period (required): Aggregation period. One of "day", "week", or "month".
+     * Headers (required):
+     * - X-Tenant-Id: Tenant identifier
+     * 
+     * Query Parameters (required):
+     * - period: Aggregation period. One of "day", "week", or "month".
      * 
      * Examples:
-     * GET /api/analytics/trends?tenantId=tenant-alpha&period=day
-     * GET /api/analytics/trends?tenantId=tenant-alpha&period=week
-     * GET /api/analytics/trends?tenantId=tenant-alpha&period=month
+     * curl -H "X-Tenant-Id: tenant-alpha" \
+     *   "http://localhost:3333/api/analytics/trends?period=day"
+     * 
+     * curl -H "X-Tenant-Id: tenant-beta" \
+     *   "http://localhost:3333/api/analytics/trends?period=week"
      * 
      * Response:
      * [
      *   {
-     *     "timestamp": "2025-10-10T00:00:00.000Z", // Start of period (day/week/month)
-     *     "amount": 50234,                          // Total transaction volume in this period
-     *     "count": 12,                               // Total number of payments in this period
-     *     "successRate": 83.3                        // Percentage of successful payments
-     *   },
-     *   {
-     *     "timestamp": "2025-10-11T00:00:00.000Z",
-     *     "amount": 41234,
-     *     "count": 10,
-     *     "successRate": 90
+     *     "timestamp": "2025-10-10T00:00:00.000Z",
+     *     "amount": 50234,
+     *     "count": 12,
+     *     "successRate": 83.3
      *   }
      * ]
      */
     @Get('trends')
-    async getTrends(@Query() query: GetTrendsDto): Promise<TrendData[]> {
-        const { tenantId, period } = query;
-
-        if (!tenantId) {
-            throw new BadRequestException('tenantId is required');
-        }
+    async getTrends(
+        @TenantId() tenantId: string,  // Extracted by TenantGuard
+        @Query() query: GetTrendsDto
+    ): Promise<TrendData[]> {
+        const { period } = query;
 
         if (!period || !['day', 'week', 'month'].includes(period)) {
-            throw new BadRequestException('period must be one of "day", "week", "month"');
+            throw new Error('period must be one of "day", "week", "month"');
         }
 
         return this.analyticsService.getTrends(tenantId, period);

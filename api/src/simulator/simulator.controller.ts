@@ -1,23 +1,26 @@
-import { Controller, Post, Get, Body, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
 import { SimulatorService } from './simulator.service';
 import { StartSimulationDto } from './dto/start-simulation.dto';
-import { StopSimulationDto } from './dto/stop-simulation.dto';
+import { TenantGuard } from '../common/guards/tenant.guard';
+import { TenantId } from '../common/decorators/tenant-id.decorator';
 
 /**
  * Simulator Controller
  * 
  * REST endpoints to control payment simulation.
+ * All endpoints require X-Tenant-Id header.
  * 
  * Endpoints:
  * - POST /api/simulator/start  - Start generating payments
  * - POST /api/simulator/stop   - Stop generating payments
- * - POST /api/simulator/stop-all - Stop all simulations
- * - GET  /api/simulator/status - Get simulation status
+ * - POST /api/simulator/stop-all - Stop all simulations (no guard)
+ * - GET  /api/simulator/status - Get simulation status (no guard)
  * 
  * Example usage:
- *   curl -X POST http://localhost:3000/api/simulator/start \
+ *   curl -X POST http://localhost:3333/api/simulator/start \
  *     -H "Content-Type: application/json" \
- *     -d '{"tenantId":"tenant-alpha","paymentsPerMinute":10}'
+ *     -H "X-Tenant-Id: tenant-alpha" \
+ *     -d '{"paymentsPerMinute":10}'
  */
 @Controller('api/simulator')
 export class SimulatorController {
@@ -26,11 +29,13 @@ export class SimulatorController {
     /**
      * POST /api/simulator/start
      * 
-     * Start payment simulation for a tenant
+     * Start payment simulation for the authenticated tenant
+     * 
+     * Headers (required):
+     * - X-Tenant-Id: Tenant identifier
      * 
      * Body:
      * {
-     *   "tenantId": "tenant-alpha",
      *   "paymentsPerMinute": 10  // Optional, default: 10
      * }
      * 
@@ -43,19 +48,14 @@ export class SimulatorController {
      * }
      */
     @Post('start')
-    startSimulation(@Body() dto: StartSimulationDto) {
-        const { tenantId, paymentsPerMinute = 10 } = dto;
+    @UseGuards(TenantGuard)
+    startSimulation(
+        @TenantId() tenantId: string,  // Extracted from X-Tenant-Id header
+        @Body() dto: StartSimulationDto
+    ) {
+        const { paymentsPerMinute = 10 } = dto;
 
-        // Validate input
-        if (!tenantId) {
-            throw new BadRequestException('tenantId is required');
-        }
-
-        if (paymentsPerMinute && (paymentsPerMinute < 1 || paymentsPerMinute > 60)) {
-            throw new BadRequestException('paymentsPerMinute must be between 1 and 60');
-        }
-
-        // Start simulation
+        // Start simulation for the authenticated tenant
         const config = this.simulatorService.startSimulation(tenantId, paymentsPerMinute);
 
         return {
@@ -69,12 +69,10 @@ export class SimulatorController {
     /**
      * POST /api/simulator/stop
      * 
-     * Stop payment simulation for a tenant
+     * Stop payment simulation for the authenticated tenant
      * 
-     * Body:
-     * {
-     *   "tenantId": "tenant-alpha"
-     * }
+     * Headers (required):
+     * - X-Tenant-Id: Tenant identifier
      * 
      * Response:
      * {
@@ -84,13 +82,8 @@ export class SimulatorController {
      * }
      */
     @Post('stop')
-    stopSimulation(@Body() dto: StopSimulationDto) {
-        const { tenantId } = dto;
-
-        if (!tenantId) {
-            throw new BadRequestException('tenantId is required');
-        }
-
+    @UseGuards(TenantGuard)
+    stopSimulation(@TenantId() tenantId: string) {
         const wasStopped = this.simulatorService.stopSimulation(tenantId);
 
         return {
@@ -103,7 +96,7 @@ export class SimulatorController {
     /**
      * POST /api/simulator/stop-all
      * 
-     * Stop all running simulations
+     * Stop all running simulations (admin operation - no tenant guard)
      * 
      * Response:
      * {
@@ -124,21 +117,12 @@ export class SimulatorController {
     /**
      * GET /api/simulator/status
      * 
-     * Get status of all running simulations
+     * Get status of all running simulations (admin operation - no tenant guard)
      * 
      * Response:
      * {
      *   "activeSimulations": 2,
-     *   "simulations": [
-     *     {
-     *       "tenantId": "tenant-alpha",
-     *       "paymentsPerMinute": 10,
-     *       "paymentsSent": 150,
-     *       "startedAt": "2024-10-11T01:30:00.000Z",
-     *       "runtimeMinutes": 15,
-     *       "isRunning": true
-     *     }
-     *   ]
+     *   "simulations": [...]
      * }
      */
     @Get('status')

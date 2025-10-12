@@ -1,15 +1,17 @@
-import { IsOptional, IsString, IsNotEmpty } from 'class-validator';
+import { IsOptional, IsDateString } from 'class-validator';
 
+/**
+ * DTO for GET /api/analytics/metrics
+ * 
+ * Note: tenantId is no longer in the DTO because it comes from
+ * the X-Tenant-Id header (validated by TenantGuard)
+ */
 export class GetMetricsDto {
-    @IsString()
-    @IsNotEmpty()
-    tenantId!: string;
-
     @IsOptional()
-    @IsString()
+    @IsDateString()
     startDate?: string;
 
     @IsOptional()
-    @IsString()
+    @IsDateString()
     endDate?: string;
 }

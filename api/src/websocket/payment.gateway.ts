@@ -63,10 +63,19 @@ export class PaymentsGateway
     }
 
     /**
+     * Validate tenant ID format
+     * Matches the validation in TenantGuard
+     */
+    private isValidTenantIdFormat(tenantId: string): boolean {
+        const pattern = /^tenant-[a-zA-Z0-9-]+$/;
+        return pattern.test(tenantId);
+    }
+
+    /**
      * Handle new client connection
      * 
      * 1. Extract tenantId from query params
-     * 2. Validate tenantId exists
+     * 2. Validate tenantId exists and format
      * 3. Join client to tenant-specific room
      * 4. Track connection in tenantRooms map
      * 5. Send connection confirmation to client
@@ -74,11 +83,23 @@ export class PaymentsGateway
     handleConnection(client: Socket) {
         const tenantId = client.handshake.query.tenantId as string;
 
-        // Validate tenantId
-        if (!tenantId) {
+        // Validate tenantId exists
+        if (!tenantId || tenantId.trim() === '') {
             this.logger.warn(`Connection rejected: Missing tenantId (client: ${client.id})`);
             client.emit('error', {
                 message: 'tenantId is required in query parameters',
+            });
+            client.disconnect();
+            return;
+        }
+
+        // Validate tenant ID format (same as REST API guard)
+        if (!this.isValidTenantIdFormat(tenantId)) {
+            this.logger.warn(
+                `Connection rejected: Invalid tenantId format: ${tenantId} (client: ${client.id})`
+            );
+            client.emit('error', {
+                message: 'Invalid tenantId format. Expected format: tenant-{name}',
             });
             client.disconnect();
             return;
