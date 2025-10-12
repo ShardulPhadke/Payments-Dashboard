@@ -150,7 +150,7 @@ export default function MetricsGrid() {
                 <Grid size={3}>
                     <MetricCard
                         title="Top Payment Method"
-                        value={formatPaymentMethod(metrics.topPaymentMethod)}
+                        value={formatPaymentMethod(metrics.topPaymentMethod).toUpperCase()}
                         subtitle={`Peak hour: ${formatHour(metrics.peakHour)}`}
                         icon={<Payment />}
                         color="info"
