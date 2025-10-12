@@ -71,6 +71,7 @@
     "axios": "^1.6.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "cross-fetch": "^4.1.0",
     "mongoose": "^8.19.1",
     "next": "~15.2.4",
     "react": "19.0.0",
