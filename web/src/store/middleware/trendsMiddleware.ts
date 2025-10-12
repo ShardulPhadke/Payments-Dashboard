@@ -6,23 +6,36 @@ import { PaymentEventType } from '@payment/shared-types';
 /**
  * Trends Middleware
  *
- * - Buffers incoming payment events
- * - Flushes every `flushInterval` ms
- * - Dispatches batched optimistic updates
+ * Buffers incoming payment events and flushes them every flushInterval ms
+ * to avoid too many Redux updates and re-renders.
+ * 
+ * Flow:
+ * 1. WebSocket event arrives → addPaymentEvent action
+ * 2. This middleware catches it and adds to buffer
+ * 3. After flushInterval, all buffered events are dispatched as optimisticUpdateTrend
+ * 4. TrendChart re-renders once with all updates
  */
 export const trendsMiddleware: Middleware = (store) => {
     let buffer: TrendEventForStore[] = [];
     let flushTimer: ReturnType<typeof setTimeout> | null = null;
-    const flushInterval = 1000; // adjust as needed
+    const flushInterval = 1000; // 1 second batching
 
     const flushBuffer = () => {
         if (buffer.length === 0) return;
 
-        // Dispatch each buffered event as an optimistic update
+        console.log(`[TrendsMiddleware] Flushing ${buffer.length} events`);
+
+        // Dispatch all buffered events
         buffer.forEach((evt) => {
+            console.log('[TrendsMiddleware] Updating trend:', {
+                timestamp: evt.timestamp,
+                amount: evt.payment.amount,
+                status: evt.payment.status,
+            });
             store.dispatch(optimisticUpdateTrend(evt));
         });
 
+        // Clear buffer
         buffer = [];
         flushTimer = null;
     };
@@ -30,15 +43,33 @@ export const trendsMiddleware: Middleware = (store) => {
     return (next) => (action) => {
         const result = next(action);
 
+        // Listen for payment events from WebSocket
         if (addPaymentEvent.match(action)) {
             const { payment, type, timestamp } = action.payload;
 
+            console.log('[TrendsMiddleware] Buffering event:', {
+                rawTimestamp: timestamp,
+                type,
+                amount: payment.amount,
+                status: payment.status,
+            });
+
+            // Ensure timestamp is ISO string
+            // timestamp is already a string from PaymentEventForStore
+            const isoTs = typeof timestamp === 'string'
+                ? new Date(timestamp).toISOString()
+                : timestamp;
+
+            console.log('[TrendsMiddleware] Normalized timestamp:', isoTs);
+
+            // Add to buffer
             buffer.push({
                 type: type as PaymentEventType,
                 payment,
-                timestamp: new Date(timestamp).toISOString(),
+                timestamp: isoTs,
             });
 
+            // Schedule flush if not already scheduled
             if (!flushTimer) {
                 flushTimer = setTimeout(flushBuffer, flushInterval);
             }
