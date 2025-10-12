@@ -1,26 +1,49 @@
 import { Middleware } from '@reduxjs/toolkit';
 import { addPaymentEvent } from '../slices/paymentsWsSlice';
-import { optimisticUpdateTrend } from '../slices/trendsSlice';
-import { PaymentEvent, PaymentEventType } from '@payment/shared-types';
+import { optimisticUpdateTrend, TrendEventForStore } from '../slices/trendsSlice';
+import { PaymentEventType } from '@payment/shared-types';
 
 /**
- * Listens for WebSocket payment events and updates trend data optimistically
+ * Trends Middleware
+ *
+ * - Buffers incoming payment events
+ * - Flushes every `flushInterval` ms
+ * - Dispatches batched optimistic updates
  */
-export const trendsMiddleware: Middleware = (store) => (next) => (action) => {
-    const result = next(action);
+export const trendsMiddleware: Middleware = (store) => {
+    let buffer: TrendEventForStore[] = [];
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    const flushInterval = 1000; // adjust as needed
 
-    if (addPaymentEvent.match(action)) {
-        const { payment, type, timestamp } = action.payload;
+    const flushBuffer = () => {
+        if (buffer.length === 0) return;
 
-        // Convert timestamp to Date safely
-        store.dispatch(
-            optimisticUpdateTrend({
+        // Dispatch each buffered event as an optimistic update
+        buffer.forEach((evt) => {
+            store.dispatch(optimisticUpdateTrend(evt));
+        });
+
+        buffer = [];
+        flushTimer = null;
+    };
+
+    return (next) => (action) => {
+        const result = next(action);
+
+        if (addPaymentEvent.match(action)) {
+            const { payment, type, timestamp } = action.payload;
+
+            buffer.push({
                 type: type as PaymentEventType,
                 payment,
-                timestamp: new Date(timestamp).toISOString(), // store as string
-            })
-        );
-    }
+                timestamp: new Date(timestamp).toISOString(),
+            });
 
-    return result;
+            if (!flushTimer) {
+                flushTimer = setTimeout(flushBuffer, flushInterval);
+            }
+        }
+
+        return result;
+    };
 };

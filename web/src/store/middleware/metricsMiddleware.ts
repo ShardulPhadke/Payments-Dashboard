@@ -1,39 +1,74 @@
+// metricsMiddleware.ts
 import { Middleware } from '@reduxjs/toolkit';
 import { addPaymentEvent } from '../slices/paymentsWsSlice';
 import { optimisticUpdate } from '../slices/metricsSlice';
+import type { PaymentStatus } from '@payment/shared-types';
 
 /**
- * Metrics Middleware
- * 
- * Listens to WebSocket payment events and applies optimistic updates to metrics.
- * 
- * Flow:
- * 1. WebSocket receives payment event
- * 2. paymentsWsSlice stores it in events array
- * 3. This middleware catches the action
- * 4. Extracts amount and status
- * 5. Dispatches optimisticUpdate to metricsSlice
- * 
- * Benefits:
- * - Real-time metrics without API calls
- * - Feels instant to the user
- * - Reconciled with authoritative data periodically
+ * Metrics Middleware with batching and throttling
+ *
+ * - Accumulates incoming payment events in a buffer
+ * - Flushes the buffer every `flushInterval` ms
+ * - Dispatches a single `optimisticUpdate` for all buffered events
  */
-export const metricsMiddleware: Middleware = (store) => (next) => (action) => {
-    const result = next(action);
+export const metricsMiddleware: Middleware = (store) => {
+    // Buffer for accumulating events
+    let buffer: { amount: number; status: PaymentStatus }[] = [];
 
-    // Listen for payment events being added
-    if (addPaymentEvent.match(action)) {
-        const { payment } = action.payload;
+    // Timer to flush the buffer
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
-        // Dispatch optimistic update to metrics
+    // Throttle interval (milliseconds)
+    const flushInterval = 1000; // adjust as needed
+
+    // Flush function
+    const flushBuffer = () => {
+        if (buffer.length === 0) return;
+
+        // Aggregate totals
+        let totalAmount = 0;
+        let successCount = 0;
+        let failedCount = 0;
+        let refundedCount = 0;
+
+        buffer.forEach((evt) => {
+            totalAmount += evt.amount;
+            if (evt.status === 'success') successCount += 1;
+            else if (evt.status === 'failed') failedCount += 1;
+            else if (evt.status === 'refunded') refundedCount += 1;
+        });
+
+        // Dispatch a single optimistic update with aggregated data
         store.dispatch(
             optimisticUpdate({
-                amount: payment.amount,
-                status: payment.status,
+                totalVolume: totalAmount,
+                totalCount: buffer.length,
+                successCount,
+                failedCount,
+                refundedCount,
             })
         );
-    }
 
-    return result;
+        // Clear buffer
+        buffer = [];
+        flushTimer = null;
+    };
+
+    return (next) => (action) => {
+        const result = next(action);
+
+        if (addPaymentEvent.match(action)) {
+            const { payment } = action.payload;
+
+            // Add to buffer
+            buffer.push({ amount: payment.amount, status: payment.status });
+
+            // Start flush timer if not already scheduled
+            if (!flushTimer) {
+                flushTimer = setTimeout(flushBuffer, flushInterval);
+            }
+        }
+
+        return result;
+    };
 };

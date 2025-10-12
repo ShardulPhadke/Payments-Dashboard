@@ -11,6 +11,7 @@ import {
     Chip,
     Paper,
     Divider,
+    Button
 } from '@mui/material';
 import { CheckCircle, Cancel, Undo, Circle, FiberManualRecord } from '@mui/icons-material';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
@@ -47,13 +48,17 @@ export default function EventsFeed() {
                     <Typography variant="h6">Live Payment Events</Typography>
                     <Box display="flex" gap={1} alignItems="center">
                         <ConnectionStatus status={connection?.status || 'disconnected'} />
-                        <Chip
-                            label={autoScroll && isAtTop ? 'Auto-scroll ON' : 'Back To Top'}
-                            size="small"
-                            color={autoScroll && isAtTop ? 'success' : 'default'}
-                            onClick={() => handleResumeAutoScroll()}
-                            sx={{ cursor: 'pointer' }}
-                        />
+                        {!isAtTop && (
+                            <Button
+                                variant="outlined"
+                                color="primary"
+                                size="small"
+                                onClick={handleResumeAutoScroll}
+                                sx={{ textTransform: 'none' }}
+                            >
+                                Back To Top
+                            </Button>
+                        )}
                     </Box>
                 </Box>
 

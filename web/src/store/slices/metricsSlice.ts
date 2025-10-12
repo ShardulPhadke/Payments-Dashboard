@@ -52,38 +52,33 @@ export const metricsSlice = createSlice({
          */
         optimisticUpdate: (
             state,
-            action: PayloadAction<{ amount: number; status: PaymentStatus }>
+            action: PayloadAction<{
+                totalVolume: number;
+                totalCount: number;
+                successCount: number;
+                failedCount: number;
+                refundedCount: number;
+            }>
         ) => {
             if (!state.data) return;
+            const { totalVolume, totalCount, successCount, failedCount, refundedCount } = action.payload;
 
-            const { amount, status } = action.payload;
+            state.data.totalVolume += totalVolume;
+            state.data.totalCount += totalCount;
+            state.data.successCount += successCount;
+            state.data.failedCount += failedCount;
+            state.data.refundedCount += refundedCount;
 
-            // Update volume and count
-            state.data.totalVolume += amount;
-            state.data.totalCount += 1;
-
-            // Update status-specific counters
-            if (status === 'success') {
-                state.data.successCount += 1;
-            } else if (status === 'failed') {
-                state.data.failedCount += 1;
-            } else if (status === 'refunded') {
-                state.data.refundedCount += 1;
-            }
-
-            // Recalculate success rate
             state.data.successRate =
                 state.data.totalCount > 0
                     ? Math.round((state.data.successCount / state.data.totalCount) * 1000) / 10
                     : 0;
 
-            // Recalculate average amount
             state.data.averageAmount =
                 state.data.totalCount > 0
-                    ? Math.round((state.data.totalVolume / state.data.totalCount) * 100) / 100
+                    ? Math.round(state.data.totalVolume / state.data.totalCount * 100) / 100
                     : 0;
 
-            // Mark as optimistic
             state.isOptimistic = true;
             state.lastUpdated = new Date().toISOString();
         },
