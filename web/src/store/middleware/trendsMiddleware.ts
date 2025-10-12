@@ -23,15 +23,8 @@ export const trendsMiddleware: Middleware = (store) => {
     const flushBuffer = () => {
         if (buffer.length === 0) return;
 
-        console.log(`[TrendsMiddleware] Flushing ${buffer.length} events`);
-
         // Dispatch all buffered events
         buffer.forEach((evt) => {
-            console.log('[TrendsMiddleware] Updating trend:', {
-                timestamp: evt.timestamp,
-                amount: evt.payment.amount,
-                status: evt.payment.status,
-            });
             store.dispatch(optimisticUpdateTrend(evt));
         });
 
@@ -47,20 +40,11 @@ export const trendsMiddleware: Middleware = (store) => {
         if (addPaymentEvent.match(action)) {
             const { payment, type, timestamp } = action.payload;
 
-            console.log('[TrendsMiddleware] Buffering event:', {
-                rawTimestamp: timestamp,
-                type,
-                amount: payment.amount,
-                status: payment.status,
-            });
-
             // Ensure timestamp is ISO string
             // timestamp is already a string from PaymentEventForStore
             const isoTs = typeof timestamp === 'string'
                 ? new Date(timestamp).toISOString()
                 : timestamp;
-
-            console.log('[TrendsMiddleware] Normalized timestamp:', isoTs);
 
             // Add to buffer
             buffer.push({

@@ -53,7 +53,6 @@ export default function TrendChart() {
     // Sync API data to Redux when it arrives
     useEffect(() => {
         if (apiData) {
-            console.log('[TrendChart] Syncing API data to Redux:', apiData.length, 'points');
             dispatch(setTrends(apiData));
         }
     }, [apiData, dispatch]);
@@ -63,7 +62,6 @@ export default function TrendChart() {
         newPeriod: TrendPeriod | null
     ) => {
         if (newPeriod) {
-            console.log('[TrendChart] Period changed to:', newPeriod);
             dispatch(setPeriod(newPeriod));
         }
     };
