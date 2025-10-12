@@ -13,13 +13,13 @@ export const trendsMiddleware: Middleware = (store) => (next) => (action) => {
         const { payment, type, timestamp } = action.payload;
 
         // Convert timestamp to Date safely
-        const event: PaymentEvent = {
-            type: type as PaymentEventType,
-            payment,
-            timestamp: new Date(timestamp), // always convert to Date
-        };
-
-        store.dispatch(optimisticUpdateTrend(event));
+        store.dispatch(
+            optimisticUpdateTrend({
+                type: type as PaymentEventType,
+                payment,
+                timestamp: new Date(timestamp).toISOString(), // store as string
+            })
+        );
     }
 
     return result;
