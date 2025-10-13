@@ -5,6 +5,8 @@ import EventsFeed from '@/components/EventsFeed';
 import { Container, Typography, Box, Paper } from '@mui/material';
 import { Dashboard as DashboardIcon } from '@mui/icons-material';
 import TrendChart from '@/components/TrendChart';
+import AlertsToaster from '@/components/AlertsToaster';
+import SimulatorControls from '@/components/SimulatorControls';
 
 /**
  * Dashboard Page (MUI)
@@ -42,15 +44,21 @@ export default function DashboardPage() {
         </Box>
 
         {/* Trends Chart */}
-         <Box mb={4}>
+        <Box mb={4}>
           <Typography variant="h5" component="h2" fontWeight="bold" mb={2}>
             Trends
           </Typography>
           <TrendChart />
         </Box>
 
+        {/* Simulator Controls */}
+        <Box mb={4}>
+          <SimulatorControls />
+        </Box>
+        
         {/* Events Feed */}
         <Box>
+          <AlertsToaster />
           <Typography variant="h5" component="h2" fontWeight="bold" mb={2}>
             Live Payment Events
           </Typography>
