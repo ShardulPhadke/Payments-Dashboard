@@ -25,6 +25,7 @@ import {
     Undo,
     Payment,
 } from '@mui/icons-material';
+import React from 'react';
 
 /**
  * MetricsGrid Component (MUI)
@@ -41,9 +42,12 @@ import {
 export default function MetricsGrid() {
     const dispatch = useDispatch();
 
+    const connection = useSelector((state: RootState) => state.paymentsWs.connection);
+    const isSocketHealthy = connection?.status === 'connected';
     // Fetch metrics from API (with auto-refresh every 30s)
     const { data: apiMetrics, isLoading, error } = useGetMetricsQuery(undefined, {
-        pollingInterval: 30000, // Re-fetch every 30 seconds
+        // do not re fetch if the socket is healty
+        pollingInterval: isSocketHealthy ? 0 : 30000
     });
 
     // Get optimistic metrics from Redux
@@ -194,12 +198,9 @@ export default function MetricsGrid() {
 
                 {/* Last Updated */}
                 <Grid size={3}>
-                    <MetricCard
-                        title="Last Updated"
-                        value={metricsState.lastUpdated ? formatTimestamp(metricsState.lastUpdated) : 'Never'}
-                        subtitle={metricsState.isOptimistic ? 'Real-time' : 'From API'}
-                        icon={<TrendingFlat />}
-                        color="default"
+                    <LastUpdatedCard
+                        lastUpdated={metricsState.lastUpdated}
+                        isOptimistic={metricsState.isOptimistic}
                     />
                 </Grid>
             </Grid>
@@ -306,6 +307,29 @@ function MetricCardSkeleton() {
     );
 }
 
+function LastUpdatedCard({ lastUpdated, isOptimistic }: { lastUpdated: string | null, isOptimistic: boolean }) {
+    const [now, setNow] = React.useState(Date.now());
+
+    // Update every 10 seconds to keep "x min ago" fresh
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 10000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const value = lastUpdated ? formatTimestamp(lastUpdated, now) : 'Never';
+    const subtitle = isOptimistic ? 'Real-time' : 'From API';
+
+    return (
+        <MetricCard
+            title="Last Updated"
+            value={value}
+            subtitle={subtitle}
+            icon={<TrendingFlat />}
+            color="default"
+        />
+    );
+}
+
 /**
  * Helper Functions
  */
@@ -320,13 +344,16 @@ function formatHour(hour: number): string {
     return `${displayHour}:00 ${period}`;
 }
 
-function formatTimestamp(timestamp: string): string {
+function formatTimestamp(timestamp: string, nowMs: number = Date.now()): string {
     const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    let diffMs = nowMs - date.getTime();
+
+    if (diffMs < 0) diffMs = 0;
+
     const diffSecs = Math.floor(diffMs / 1000);
 
     if (diffSecs < 60) return `${diffSecs}s ago`;
     if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)}m ago`;
+    if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)}h ago`;
     return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 }

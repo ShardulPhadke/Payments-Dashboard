@@ -45,9 +45,11 @@ export default function TrendChart() {
     const { period, data, isOptimistic } = trendState;
 
     // Fetch trends from API (reconciliation)
-    // Skip if period changes to avoid duplicate requests
+    const connection = useSelector((state: RootState) => state.paymentsWs.connection);
+    const isSocketHealthy = connection?.status === 'connected';
     const { data: apiData, isLoading, error } = useGetTrendsQuery(period, {
-        pollingInterval: 30000, // Re-fetch every 30 seconds for reconciliation
+        // do not re fetch if the socket is healty
+        pollingInterval: isSocketHealthy ? 0 : 30000
     });
 
     // Sync API data to Redux when it arrives
@@ -149,7 +151,6 @@ export default function TrendChart() {
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart
                                 data={data}
-                                margin={{ top: 20, right: 30, left: 60, bottom: 20 }}
                             >
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                                 <XAxis
@@ -232,7 +233,6 @@ export default function TrendChart() {
                         <ResponsiveContainer width="100%" height="100%">
                             <LineChart
                                 data={data}
-                                margin={{ top: 20, right: 30, left: 60, bottom: 20 }}
                             >
                                 <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                                 <XAxis
