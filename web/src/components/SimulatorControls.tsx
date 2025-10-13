@@ -9,7 +9,7 @@ export default function SimulatorControls() {
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const TENANT_ID = 'tenant-alpha'; // Replace with dynamic tenant if needed
+    const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || "tenant-alpha"; // Replace with dynamic tenant if needed
 
     const handleStart = async () => {
         setLoading(true);
