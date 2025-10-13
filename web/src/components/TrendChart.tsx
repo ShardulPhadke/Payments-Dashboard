@@ -52,7 +52,7 @@ export default function TrendChart() {
 
     const handleExport = () => {
         if (data) {
-            exportTrendsToCSV(data, period, 'tenant-alpha');
+            exportTrendsToCSV(data, period, process.env.NEXT_PUBLIC_TENANT_ID ?? "tenant-alpha");
         }
     };
 

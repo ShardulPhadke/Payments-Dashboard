@@ -55,7 +55,7 @@ export default function MetricsGrid() {
 
     const handleExport = () => {
         if (metrics) {
-            exportMetricsToCSV(metrics, 'tenant-alpha');
+            exportMetricsToCSV(metrics, process.env.NEXT_PUBLIC_TENANT_ID ?? "tenant-alpha");
         }
     };
 

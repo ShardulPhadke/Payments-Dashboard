@@ -11,7 +11,7 @@ interface ReduxProviderProps {
 
 export default function ReduxProvider({ children }: ReduxProviderProps) {
     React.useEffect(() => {
-        const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'tenant-demo'
+        const tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'tenant-alpha'
         // const wsUrl = `${process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, 'ws')}/ws/payments`
         const wsUrl = "ws://localhost:3333"
         const wsClient = new PaymentsWsClient(wsUrl, tenantId)

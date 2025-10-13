@@ -10,7 +10,7 @@ export const paymentsApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333',
     prepareHeaders: (headers) => {
-      headers.set('X-Tenant-Id', process.env.NEXT_PUBLIC_TENANT_ID || 'tenant-demo')
+      headers.set('X-Tenant-Id', process.env.NEXT_PUBLIC_TENANT_ID || 'tenant-alpha')
       return headers
     },
   }),
