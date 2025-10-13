@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useGetMetricsQuery } from '@/store/services/paymentsApi';
 import { setMetrics } from '@/store/slices/metricsSlice';
 import type { RootState } from '@/store';
-import { Grid } from '@mui/material'; // Use Grid2
+import { Grid } from '@mui/material';
 import {
     Card,
     CardContent,
@@ -14,6 +14,9 @@ import {
     Skeleton,
     Alert,
     Chip,
+    Button,
+    IconButton,
+    Tooltip,
 } from '@mui/material';
 import {
     TrendingUp,
@@ -24,44 +27,37 @@ import {
     Cancel,
     Undo,
     Payment,
+    Download,
+    Visibility,
 } from '@mui/icons-material';
 import React from 'react';
+import { exportMetricsToCSV } from '@/utils/csvExport';
+import MetricDrilldownDialog from './MetricDrilldownDialog';
 
-/**
- * MetricsGrid Component (MUI)
- * 
- * Displays payment metrics with real-time optimistic updates.
- * Built with Material-UI components as per architecture spec.
- * 
- * Features:
- * - Fetches initial data from REST API
- * - Updates optimistically from WebSocket events
- * - Re-fetches every 30s for reconciliation
- * - Shows visual indicator when displaying optimistic data
- */
 export default function MetricsGrid() {
     const dispatch = useDispatch();
-
     const connection = useSelector((state: RootState) => state.paymentsWs.connection);
     const isSocketHealthy = connection?.status === 'connected';
-    // Fetch metrics from API (with auto-refresh every 30s)
     const { data: apiMetrics, isLoading, error } = useGetMetricsQuery(undefined, {
-        // do not re fetch if the socket is healty
-        pollingInterval: isSocketHealthy ? 0 : 30000
+        pollingInterval: isSocketHealthy ? 0 : 30000,
     });
 
-    // Get optimistic metrics from Redux
     const metricsState = useSelector((state: RootState) => state.metrics);
+    const metrics = metricsState.data || apiMetrics;
 
-    // Sync API data to Redux when it arrives
+    const [drilldownOpen, setDrilldownOpen] = useState(false);
+
     useEffect(() => {
         if (apiMetrics) {
             dispatch(setMetrics(apiMetrics));
         }
     }, [apiMetrics, dispatch]);
 
-    // Use optimistic metrics if available, otherwise use API data
-    const metrics = metricsState.data || apiMetrics;
+    const handleExport = () => {
+        if (metrics) {
+            exportMetricsToCSV(metrics, 'tenant-alpha');
+        }
+    };
 
     if (isLoading) {
         return (
@@ -79,40 +75,47 @@ export default function MetricsGrid() {
         return (
             <Alert severity="error">
                 <Typography variant="h6">Error loading metrics</Typography>
-                <Typography variant="body2">
-                    Failed to fetch payment metrics. Please try again.
-                </Typography>
+                <Typography variant="body2">Failed to fetch payment metrics. Please try again.</Typography>
             </Alert>
         );
     }
 
     if (!metrics) {
-        return (
-            <Alert severity="info">No metrics available</Alert>
-        );
+        return <Alert severity="info">No metrics available</Alert>;
     }
 
     return (
         <Box>
-            {/* Optimistic indicator */}
-            {metricsState.isOptimistic && (
-                <Alert severity="info" sx={{ mb: 3 }}>
-                    <Box display="flex" alignItems="center" gap={1}>
-                        <Chip
-                            label="LIVE"
-                            color="primary"
+            {/* Header with actions */}
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                {metricsState.isOptimistic && (
+                    <Alert severity="info" sx={{ flex: 1, mr: 2 }}>
+                        <Box display="flex" alignItems="center" gap={1}>
+                            <Chip label="LIVE" color="primary" size="small" sx={{ animation: 'pulse 2s infinite' }} />
+                            <Typography variant="body2">Live updates active</Typography>
+                        </Box>
+                    </Alert>
+                )}
+                <Box display="flex" gap={1} ml="auto">
+                    <Tooltip title="View detailed breakdown">
+                        <Button
+                            variant="outlined"
+                            startIcon={<Visibility />}
+                            onClick={() => setDrilldownOpen(true)}
                             size="small"
-                            sx={{ animation: 'pulse 2s infinite' }}
-                        />
-                        <Typography variant="body2">
-                            Live updates active • Data syncs every 30s
-                        </Typography>
-                    </Box>
-                </Alert>
-            )}
+                        >
+                            Details
+                        </Button>
+                    </Tooltip>
+                    <Tooltip title="Export metrics to CSV">
+                        <Button variant="outlined" startIcon={<Download />} onClick={handleExport} size="small">
+                            Export CSV
+                        </Button>
+                    </Tooltip>
+                </Box>
+            </Box>
 
             <Grid container spacing={3}>
-                {/* Total Volume */}
                 <Grid size={3}>
                     <MetricCard
                         title="Total Volume"
@@ -124,7 +127,6 @@ export default function MetricsGrid() {
                     />
                 </Grid>
 
-                {/* Success Rate */}
                 <Grid size={3}>
                     <MetricCard
                         title="Success Rate"
@@ -136,7 +138,6 @@ export default function MetricsGrid() {
                     />
                 </Grid>
 
-                {/* Average Amount */}
                 <Grid size={3}>
                     <MetricCard
                         title="Average Amount"
@@ -150,7 +151,6 @@ export default function MetricsGrid() {
                     />
                 </Grid>
 
-                {/* Top Method */}
                 <Grid size={3}>
                     <MetricCard
                         title="Top Payment Method"
@@ -161,7 +161,6 @@ export default function MetricsGrid() {
                     />
                 </Grid>
 
-                {/* Failed Payments */}
                 <Grid size={3}>
                     <MetricCard
                         title="Failed Payments"
@@ -173,7 +172,6 @@ export default function MetricsGrid() {
                     />
                 </Grid>
 
-                {/* Refunded Payments */}
                 <Grid size={3}>
                     <MetricCard
                         title="Refunded Payments"
@@ -184,7 +182,6 @@ export default function MetricsGrid() {
                     />
                 </Grid>
 
-                {/* Total Transactions */}
                 <Grid size={3}>
                     <MetricCard
                         title="Total Transactions"
@@ -196,21 +193,22 @@ export default function MetricsGrid() {
                     />
                 </Grid>
 
-                {/* Last Updated */}
                 <Grid size={3}>
-                    <LastUpdatedCard
-                        lastUpdated={metricsState.lastUpdated}
-                        isOptimistic={metricsState.isOptimistic}
-                    />
+                    <LastUpdatedCard lastUpdated={metricsState.lastUpdated} isOptimistic={metricsState.isOptimistic} />
                 </Grid>
             </Grid>
+
+            {/* Drilldown Dialog */}
+            <MetricDrilldownDialog
+                open={drilldownOpen}
+                onClose={() => setDrilldownOpen(false)}
+                metrics={metrics}
+                title="Payment Metrics"
+            />
         </Box>
     );
 }
 
-/**
- * MetricCard Component (MUI)
- */
 interface MetricCardProps {
     title: string;
     value: string;
@@ -222,16 +220,7 @@ interface MetricCardProps {
 
 function MetricCard({ title, value, subtitle, icon, trend, color = 'default' }: MetricCardProps) {
     return (
-        <Card
-            sx={{
-                height: '100%',
-                transition: 'all 0.3s',
-                '&:hover': {
-                    boxShadow: 6,
-                    transform: 'translateY(-4px)',
-                },
-            }}
-        >
+        <Card sx={{ height: '100%', transition: 'all 0.3s', '&:hover': { boxShadow: 6, transform: 'translateY(-4px)' } }}>
             <CardContent>
                 <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
@@ -240,61 +229,31 @@ function MetricCard({ title, value, subtitle, icon, trend, color = 'default' }: 
                     <Box display="flex" gap={1} alignItems="center">
                         {trend && <TrendIndicator trend={trend} />}
                         {icon && (
-                            <Box
-                                sx={{
-                                    color: color !== 'default' ? `${color}.main` : 'text.secondary',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                }}
-                            >
+                            <Box sx={{ color: color !== 'default' ? `${color}.main` : 'text.secondary', display: 'flex', alignItems: 'center' }}>
                                 {icon}
                             </Box>
                         )}
                     </Box>
                 </Box>
-
-                <Typography
-                    variant="h4"
-                    component="div"
-                    fontWeight="bold"
-                    color={color !== 'default' ? `${color}.main` : 'text.primary'}
-                    sx={{ mb: 1 }}
-                >
+                <Typography variant="h4" component="div" fontWeight="bold" color={color !== 'default' ? `${color}.main` : 'text.primary'} sx={{ mb: 1 }}>
                     {value}
                 </Typography>
-
-                {subtitle && (
-                    <Typography variant="body2" color="text.secondary">
-                        {subtitle}
-                    </Typography>
-                )}
+                {subtitle && <Typography variant="body2" color="text.secondary">{subtitle}</Typography>}
             </CardContent>
         </Card>
     );
 }
 
-/**
- * Trend Indicator (MUI)
- */
 function TrendIndicator({ trend }: { trend: 'up' | 'down' | 'stable' }) {
     const config = {
         up: { icon: <TrendingUp />, color: 'success.main' },
         down: { icon: <TrendingDown />, color: 'error.main' },
         stable: { icon: <TrendingFlat />, color: 'text.secondary' },
     };
-
     const { icon, color } = config[trend];
-
-    return (
-        <Box sx={{ color, display: 'flex', alignItems: 'center' }}>
-            {icon}
-        </Box>
-    );
+    return <Box sx={{ color, display: 'flex', alignItems: 'center' }}>{icon}</Box>;
 }
 
-/**
- * Skeleton Loader (MUI)
- */
 function MetricCardSkeleton() {
     return (
         <Card sx={{ height: '100%' }}>
@@ -307,32 +266,17 @@ function MetricCardSkeleton() {
     );
 }
 
-function LastUpdatedCard({ lastUpdated, isOptimistic }: { lastUpdated: string | null, isOptimistic: boolean }) {
+function LastUpdatedCard({ lastUpdated, isOptimistic }: { lastUpdated: string | null; isOptimistic: boolean }) {
     const [now, setNow] = React.useState(Date.now());
-
-    // Update every 10 seconds to keep "x min ago" fresh
     useEffect(() => {
         const interval = setInterval(() => setNow(Date.now()), 10000);
         return () => clearInterval(interval);
     }, []);
-
     const value = lastUpdated ? formatTimestamp(lastUpdated, now) : 'Never';
     const subtitle = isOptimistic ? 'Real-time' : 'From API';
-
-    return (
-        <MetricCard
-            title="Last Updated"
-            value={value}
-            subtitle={subtitle}
-            icon={<TrendingFlat />}
-            color="default"
-        />
-    );
+    return <MetricCard title="Last Updated" value={value} subtitle={subtitle} icon={<TrendingFlat />} color="default" />;
 }
 
-/**
- * Helper Functions
- */
 function formatPaymentMethod(method: string): string {
     const formatted = method.replace(/_/g, ' ');
     return formatted.charAt(0).toUpperCase() + formatted.slice(1);
@@ -347,11 +291,8 @@ function formatHour(hour: number): string {
 function formatTimestamp(timestamp: string, nowMs: number = Date.now()): string {
     const date = new Date(timestamp);
     let diffMs = nowMs - date.getTime();
-
     if (diffMs < 0) diffMs = 0;
-
     const diffSecs = Math.floor(diffMs / 1000);
-
     if (diffSecs < 60) return `${diffSecs}s ago`;
     if (diffSecs < 3600) return `${Math.floor(diffSecs / 60)}m ago`;
     if (diffSecs < 86400) return `${Math.floor(diffSecs / 3600)}h ago`;
