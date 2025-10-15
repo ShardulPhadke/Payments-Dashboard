@@ -1,0 +1,72 @@
+# ============================================
+# Stage 1: Builder
+# ============================================
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++
+
+# Copy everything including node_modules
+COPY package.json package-lock.json ./
+COPY tsconfig*.json ./
+COPY nx.json ./
+COPY node_modules ./node_modules
+COPY libs ./libs
+COPY api ./api
+
+# Build the API using Nx
+RUN npx nx build api --configuration=production
+
+# ============================================
+# Stage 2: Production Runtime
+# ============================================
+FROM node:20-alpine
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Install runtime dependencies
+RUN apk add --no-cache netcat-openbsd
+
+# Copy package files
+COPY package.json package-lock.json ./
+COPY tsconfig*.json ./
+
+# Copy node_modules from builder (already installed locally)
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy built API from builder
+COPY --from=builder /app/api/dist ./api/dist
+
+# Copy shared types
+COPY --from=builder /app/libs ./libs
+
+# Copy seed scripts and dependencies
+COPY --from=builder /app/api/src/scripts ./api/src/scripts
+COPY --from=builder /app/api/src/database ./api/src/database
+COPY --from=builder /app/api/src/payments ./api/src/payments
+COPY --from=builder /app/api/src/app ./api/src/app
+
+# Copy entrypoint script
+COPY docker-entrypoint-api.sh /docker-entrypoint-api.sh
+RUN chmod +x /docker-entrypoint-api.sh
+
+# Create a non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001 && \
+    chown -R nestjs:nodejs /app
+
+USER nestjs
+
+# Expose API port
+EXPOSE 3333
+
+# Health check
+# HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+#   CMD node -e "require('http').get('http://localhost:3333/api', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+ENTRYPOINT ["/docker-entrypoint-api.sh"]
+
+# Start the API
+CMD ["node", "api/dist/main.js"]

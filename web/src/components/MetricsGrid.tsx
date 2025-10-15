@@ -32,6 +32,7 @@ import {
 import React from 'react';
 import { exportMetricsToCSV } from '@/utils/csvExport';
 import MetricDrilldownDialog from './MetricDrilldownDialog';
+import { getEnv } from '@/utils/env';
 
 export default function MetricsGrid() {
     const dispatch = useDispatch();
@@ -54,7 +55,7 @@ export default function MetricsGrid() {
 
     const handleExport = () => {
         if (metrics) {
-            exportMetricsToCSV(metrics, process.env.NEXT_PUBLIC_TENANT_ID ?? "tenant-alpha");
+            exportMetricsToCSV(metrics, getEnv('NEXT_PUBLIC_TENANT_ID', 'tenant-alpha'));
         }
     };
 

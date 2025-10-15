@@ -4,13 +4,14 @@ import type {
   TrendData,
   TrendPeriod,
 } from '@payment/shared-types'
+import { getEnv } from '@/utils/env'
 
 export const paymentsApi = createApi({
   reducerPath: 'paymentsApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333',
+    baseUrl: getEnv('NEXT_PUBLIC_API_URL', 'http://localhost:3333'),
     prepareHeaders: (headers) => {
-      headers.set('X-Tenant-Id', process.env.NEXT_PUBLIC_TENANT_ID || 'tenant-alpha')
+      headers.set('X-Tenant-Id', getEnv('NEXT_PUBLIC_TENANT_ID', 'tenant-alpha'))
       return headers
     },
   }),

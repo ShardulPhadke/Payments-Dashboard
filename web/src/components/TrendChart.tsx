@@ -24,6 +24,7 @@ import type { RootState } from '@/store';
 import { Download, Fullscreen } from '@mui/icons-material';
 import { exportTrendsToCSV } from '@/utils/csvExport';
 import FullScreenChartDialog from './FullScreenChartDialog';
+import { getEnv } from '@/utils/env';
 
 export default function TrendChart() {
     const dispatch = useDispatch();
@@ -52,7 +53,7 @@ export default function TrendChart() {
 
     const handleExport = () => {
         if (data) {
-            exportTrendsToCSV(data, period, process.env.NEXT_PUBLIC_TENANT_ID ?? "tenant-alpha");
+            exportTrendsToCSV(data, period, getEnv('NEXT_PUBLIC_TENANT_ID', 'tenant-alpha'));
         }
     };
 

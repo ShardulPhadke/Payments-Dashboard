@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DatabaseModule } from '../database/database.module';
 import { PaymentsModule } from '../payments/payments.module';
 
@@ -7,7 +8,7 @@ import { PaymentsModule } from '../payments/payments.module';
  * Seed Module
  * 
  * Lightweight module for running seed scripts.
- * Only imports what's needed for database operations.
+ * Includes EventEmitter so PaymentsService can be instantiated.
  */
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { PaymentsModule } from '../payments/payments.module';
       envFilePath: '.env',
     }),
     DatabaseModule,
+    EventEmitterModule.forRoot(),  // <-- add this
     PaymentsModule,
   ],
 })

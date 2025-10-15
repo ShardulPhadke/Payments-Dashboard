@@ -1,0 +1,58 @@
+# Build outputs
+dist
+.next
+out
+build
+api/dist
+web/.next
+
+# Testing
+coverage
+.nyc_output
+*.spec.ts
+*.test.ts
+api-e2e
+__tests__
+
+# Environment files
+.env
+.env*.local
+.env.development
+.env.test
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+.gitattributes
+.github
+
+# Documentation
+README.md
+*.md
+docs
+
+# Nx cache
+.nx
+
+# Misc
+*.log
+tmp
+temp
+.cache
+
+# Docker files
+docker-compose*.yml
+Dockerfile
+dockerfile
+*.dockerfile

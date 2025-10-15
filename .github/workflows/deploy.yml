@@ -1,0 +1,118 @@
+name: Build and Deploy Payment Analytics
+
+on:
+  push:
+    branches: ["main", "stable"]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ github.repository_owner }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # ============================================
+      # Checkout code
+      # ============================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ============================================
+      # Convert names to lowercase (GHCR requirement)
+      # ============================================
+      - name: Convert repository owner and name to lowercase
+        id: lowercase
+        run: |
+          echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+          echo "repo=$(echo '${{ github.event.repository.name }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      # ============================================
+      # Login to GitHub Container Registry
+      # ============================================
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ============================================
+      # Set up Docker Buildx (for caching)
+      # ============================================
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ============================================
+      # Extract metadata for tagging
+      # ============================================
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ steps.lowercase.outputs.owner }}/${{ steps.lowercase.outputs.repo }}-api
+            ${{ env.REGISTRY }}/${{ steps.lowercase.outputs.owner }}/${{ steps.lowercase.outputs.repo }}-web
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=sha
+
+      # ============================================
+      # Free up disk space
+      # ============================================
+      - name: Free up disk space
+        run: |
+          docker system prune -af || true
+          docker volume prune -f || true
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
+          sudo apt-get clean
+          df -h
+
+      # ============================================
+      # Build and push API image
+      # ============================================
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.lowercase.outputs.owner }}/${{ steps.lowercase.outputs.repo }}-api:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.lowercase.outputs.owner }}/${{ steps.lowercase.outputs.repo }}-api:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/${{ steps.lowercase.outputs.owner }}/${{ steps.lowercase.outputs.repo }}-api:latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ============================================
+      # Build and push Web image
+      # ============================================
+      - name: Build and push Web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./web/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.lowercase.outputs.owner }}/${{ steps.lowercase.outputs.repo }}-web:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.lowercase.outputs.owner }}/${{ steps.lowercase.outputs.repo }}-web:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/${{ steps.lowercase.outputs.owner }}/${{ steps.lowercase.outputs.repo }}-web:latest
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ============================================
+      # Success notification
+      # ============================================
+      - name: Build summary
+        run: |
+          echo "✅ Images built and pushed successfully!"
+          echo "API: ${{ env.REGISTRY }}/${{ steps.lowercase.outputs.owner }}/${{ steps.lowercase.outputs.repo }}-api:latest"
+          echo "Web: ${{ env.REGISTRY }}/${{ steps.lowercase.outputs.owner }}/${{ steps.lowercase.outputs.repo }}-web:latest"

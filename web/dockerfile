@@ -1,0 +1,62 @@
+# ============================================
+# Stage 1: Builder
+# ============================================
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Install build dependencies for native modules
+RUN apk add --no-cache python3 make g++
+
+# Copy everything including node_modules
+COPY package.json package-lock.json ./
+COPY tsconfig*.json ./
+COPY nx.json ./
+COPY node_modules ./node_modules
+COPY libs ./libs
+COPY web ./web
+
+# Build the web app using Nx
+RUN npx nx build web --configuration=production
+
+# ============================================
+# Stage 2: Production Runtime
+# ============================================
+FROM node:20-alpine
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Copy Next.js standalone build
+COPY --from=builder /app/web/.next/standalone ./
+COPY --from=builder /app/web/.next/static ./web/.next/static
+COPY --from=builder /app/web/public ./web/public
+
+# Copy node_modules from builder
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/package-lock.json ./
+
+# Copy shared types
+COPY --from=builder /app/libs ./libs
+
+# Copy entrypoint script
+COPY web/docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+# Create a non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+adduser -S nextjs -u 1001 && \
+chown -R nextjs:nodejs /app && \
+chown nextjs:nodejs /docker-entrypoint.sh
+
+USER nextjs
+
+# Expose Next.js port
+EXPOSE 3000
+
+# Use entrypoint to inject runtime env vars
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# Start Next.js
+CMD ["node", "web/server.js"]

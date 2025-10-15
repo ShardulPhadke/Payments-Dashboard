@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Box, Button, TextField, Typography, Alert, Stack } from '@mui/material';
+import { getEnv } from '@/utils/env';
 
 export default function SimulatorControls() {
     const [paymentsPerMinute, setPaymentsPerMinute] = useState(10);
@@ -9,7 +10,7 @@ export default function SimulatorControls() {
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const TENANT_ID = process.env.NEXT_PUBLIC_TENANT_ID || "tenant-alpha"; // Replace with dynamic tenant if needed
+    const TENANT_ID = getEnv('NEXT_PUBLIC_TENANT_ID', 'tenant-alpha'); // Replace with dynamic tenant if needed
 
     const handleStart = async () => {
         setLoading(true);
