@@ -19,14 +19,14 @@ export const alertsMiddleware: Middleware<{}, RootState> = storeAPI => next => a
         const latestPoint: TrendData = trends[trends.length - 1];
 
         // ---- Failure spike detection ----
-        const recentFailureRates: number[] = trends.slice(-10, -1).map((t: TrendData) => 100 - t.successRate);
-        const avgFailure = recentFailureRates.length
-            ? recentFailureRates.reduce((sum, val) => sum + val, 0) / recentFailureRates.length
-            : 0;
+        // const recentFailureRates: number[] = trends.slice(-10, -1).map((t: TrendData) => 100 - t.successRate);
+        // const avgFailure = recentFailureRates.length
+        //     ? recentFailureRates.reduce((sum, val) => sum + val, 0) / recentFailureRates.length
+        //     : 0;
 
         const failureRate = 100 - latestPoint.successRate;
 
-        if (failureRate > avgFailure * 2 && failureRate > 10) {
+        if (failureRate > 35) {
             // Only alert if this failure rate is different from last alerted
             if (lastFailureRateAlert !== failureRate) {
                 storeAPI.dispatch(
